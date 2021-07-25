@@ -19,6 +19,7 @@ class Tubesock
     @close_on_error = true
 
     @active = true
+    @thread = nil
   end
 
   def self.hijack(env)
@@ -70,7 +71,7 @@ class Tubesock
 
   def listen
     keepalive
-    Thread.new do
+    @thread = Thread.new do
       Thread.current.abort_on_exception = true
       begin
         @open_handlers.each(&:call)
@@ -105,10 +106,19 @@ class Tubesock
     else
       @socket.close
     end
+
+    kill
   end
 
   def closed?
     @socket.closed?
+  end
+
+  def kill
+    if @thread && @thread.alive? && @thread != Thread.current
+      @thread.kill
+      @thread = nil
+    end
   end
 
   def keepalive
